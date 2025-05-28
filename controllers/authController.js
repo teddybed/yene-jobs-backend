@@ -22,7 +22,7 @@ const transporter = nodemailer.createTransport({
 // Register with OTP
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, phoneNumber, role = 'customer' } = req.body;
+    const { name, email, password, phoneNumber, role = 'job_seeker' } = req.body;
 
     if (!email || !password || !name) {
       return res.status(400).json({ message: 'Name, email, and password are required.' });
@@ -117,7 +117,7 @@ exports.login = async (req, res) => {
 // Direct Register (without OTP, but with hashed password)
 exports.directRegister = async (req, res) => {
   try {
-    const { name, email, password, role = 'customer' } = req.body;
+    const { name, email, password, role = 'job_seeker' } = req.body;
 
     if (!email || !name) return res.status(400).json({ message: 'Name and email are required.' });
 

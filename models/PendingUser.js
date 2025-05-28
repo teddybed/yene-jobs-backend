@@ -40,8 +40,9 @@ module.exports = (sequelize, DataTypes) => {
         },
       },
       role: {
-        type: DataTypes.ENUM('admin', 'customer', 'shop', 'sub-admin', 'editor'),
+        type: DataTypes.ENUM('job_seeker', 'employer', 'admin'),
         allowNull: false,
+        defaultValue: 'job_seeker',
       },
       otp: {
         type: DataTypes.STRING(6),

@@ -27,8 +27,9 @@ module.exports = {
         allowNull: true,
       },
       role: {
-        type: Sequelize.ENUM('admin', 'customer', 'shop', 'sub-admin', 'editor'),
+        type: Sequelize.ENUM('job_seeker', 'employer', 'admin'),
         allowNull: false,
+        defaultValue: 'job_seeker',
       },
       otp: {
         type: Sequelize.STRING(6),
@@ -47,7 +48,7 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
-      },
+      }
     });
 
     // Add indexes
@@ -57,7 +58,7 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    // Remove the ENUM type explicitly before dropping the table (important for Postgres)
+    // Drop enum before dropping the table to avoid issues in Postgres
     await queryInterface.dropTable('pending_users');
     await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_pending_users_role";');
   }
