@@ -14,9 +14,12 @@ app.use(cors({
 app.use(express.json());
 
 const authRoutes = require('./routes/authRoutes');
+const jobsRoutes= require('./routes/jobRoutes');
 
 
 app.use('/api/auth', authRoutes);
+app.use('/api/jobs', jobsRoutes);
+
 
 
 const PORT = process.env.PORT || 5000;
