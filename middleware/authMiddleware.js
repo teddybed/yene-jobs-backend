@@ -1,45 +1,38 @@
 const jwt = require('jsonwebtoken');
-const { User } = require('../models'); // Import the User model
+const { User } = require('../models');
 require('dotenv').config();
 
-const authMiddleware = (requiredRoles) => async (req, res, next) => {
-  // Extract the token from the Authorization header
-  const authHeader = req.headers['authorization'];
-  if (!authHeader) {
-    return res.status(401).json({ message: 'Access Denied. No token provided.' });
-  }
-
-  // Split 'Bearer <token>'
-  const token = authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ message: 'Access Denied. No token provided.' });
-  }
-
+const authMiddleware = (requiredRoles = []) => async (req, res, next) => {
   try {
+    // Extract token from cookies
+    const token = req.cookies.token;
+
+    if (!token) {
+      return res.status(401).json({ message: 'Access Denied. No token provided.' });
+    }
+
     // Verify the token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
 
-    // Retrieve the user from the database (optional)
-    const user = await User.findByPk(req.user.id); // Assuming `id` is in the token payload
+    // Find user from DB
+    const user = await User.findByPk(decoded.id);
 
     if (!user) {
       return res.status(401).json({ message: 'User not found.' });
     }
 
-    // Check if the user's role is allowed
-    if (requiredRoles && !requiredRoles.includes(user.role)) {
+    // Check role if required
+    if (requiredRoles.length > 0 && !requiredRoles.includes(user.role)) {
       return res.status(403).json({ message: 'Access Denied. Insufficient permissions.' });
     }
 
-    // Attach the user to the request object for further use
+    // Attach user to req
     req.user = user;
 
     next();
   } catch (error) {
-    // Handle invalid token or error in database query
-    return res.status(403).json({ message: 'Invalid token or error occurred.' });
+    console.error('Auth Error:', error.message);
+    return res.status(403).json({ message: 'Invalid or expired token.' });
   }
 };
 

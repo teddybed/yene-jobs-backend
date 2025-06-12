@@ -7,10 +7,8 @@ require('dotenv').config();
 const User = db.User;
 const PendingUser = db.PendingUser;
 
-// Utility to generate 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000);
 
-// Nodemailer setup
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -18,6 +16,19 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASSWORD,
   },
 });
+
+const sendTokenCookie = (res, user) => {
+  const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, {
+    expiresIn: '7d',
+  });
+
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+};
 
 // Register with OTP
 exports.register = async (req, res) => {
@@ -82,8 +93,8 @@ exports.verifyOtp = async (req, res) => {
 
     await PendingUser.destroy({ where: { email } });
 
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET);
-    res.status(200).json({ id: user.id, token });
+    sendTokenCookie(res, user);
+    res.status(200).json({ id: user.id, role: user.role });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -107,8 +118,8 @@ exports.login = async (req, res) => {
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) return res.status(401).json({ message: 'Invalid credentials.' });
 
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET);
-    res.status(200).json({ id: user.id, token, role: user.role, interest: user.interest });
+    sendTokenCookie(res, user);
+    res.status(200).json({ id: user.id, role: user.role, interest: user.interest });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -133,8 +144,8 @@ exports.directRegister = async (req, res) => {
       role,
     });
 
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET);
-    res.status(201).json({ id: user.id, token, message: 'User registered successfully.' });
+    sendTokenCookie(res, user);
+    res.status(201).json({ id: user.id, role: user.role, message: 'User registered successfully.' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -150,9 +161,36 @@ exports.directLogin = async (req, res) => {
     const user = await User.findOne({ where: { email } });
     if (!user) return res.status(404).json({ message: 'User not found.' });
 
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET);
-    res.status(200).json({ id: user.id, token, role: user.role, message: 'Login successful.' });
+    sendTokenCookie(res, user);
+    res.status(200).json({ id: user.id, role: user.role, message: 'Login successful.' });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// Optional: Logout route to clear cookie
+exports.logout = (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/', // important to match the cookie path!
+  });
+  res.status(200).json({ message: 'Logged out successfully.' });
+};
+
+// Middleware to check auth
+exports.checkAuth = async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: 'Not authenticated' });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findByPk(decoded.id);
+    if (!user) return res.status(401).json({ message: 'Invalid token' });
+
+    res.status(200).json({ id: user.id, name: user.name, role: user.role });
+  } catch (error) {
+    res.status(401).json({ message: 'Authentication failed' });
   }
 };

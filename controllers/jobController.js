@@ -67,22 +67,27 @@ const createJob = async (req, res) => {
 
 const listJobs = async (req, res) => {
   try {
-    const jobs = await Job.findAll({
-      include: [{
-        model: User,
-                as: 'user',  // <-- must match the alias 'user' from the association
+    const { industry } = req.params;
 
-        attributes: ['id', 'name', 'role'],
-      }],
+    const jobs = await Job.findAll({
+      where: { industry },
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'role'],
+        },
+      ],
       order: [['createdAt', 'DESC']],
     });
 
     return res.status(200).json(jobs);
   } catch (error) {
-    console.error('Error fetching jobs:', error);
+    console.error('Error fetching jobs by industry:', error);
     return res.status(500).json({ message: 'Internal server error.' });
   }
 };
+
 
 module.exports = {
   createJob,

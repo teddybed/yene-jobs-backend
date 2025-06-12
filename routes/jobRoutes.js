@@ -4,10 +4,10 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// Only employer/admin can post a job
-router.post('/post', authMiddleware(), jobController.createJob);
+// POST /post - Only 'employer' or 'admin' roles can post a job
+router.post('/post', authMiddleware(['employer', 'admin']), jobController.createJob);
 
-// Anyone authenticated can list jobs
-router.get('/list',  jobController.listJobs);
+// GET /list/:industry - Anyone can list jobs, no auth needed
+router.get('/list/:industry', jobController.listJobs);
 
 module.exports = router;
